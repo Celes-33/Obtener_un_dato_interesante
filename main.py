@@ -1,39 +1,66 @@
-"""pyttsx3 examples."""
+# Importar las bibliotecas necesarias
+import discord  # Biblioteca para trabajar con la API de Discord
+from discord.ext import commands  # Controlar el bot basado en comandos
+import requests  # Biblioteca para hacer solicitudes HTTP
+import pyttsx3  # Biblioteca para la síntesis de voz
+# Inicializar los intents del bot (permisos)
+intents = discord.Intents.default()  # Crea los intents por defecto
+intents.message_content = True  # Permite al bot leer los mensajes
+# Crear el bot con el prefijo "!" y los intents configurados
+bot = commands.Bot(command_prefix="!", intents=intents)
+# Inicializar el motor de síntesis de voz
+engine = pyttsx3.init()  # Crea un objeto para la síntesis de voz
+# Ejecutar el bot (reemplaza 'TU_TOKEN_AQUI' con el token real del bot)
 
-import pyttsx3
-def configuracion(velocidad=125, volumen=1.0, voz=1):
-    engine = pyttsx3.init()  # object creation
 
-    # RATE
-    rate = engine.getProperty("rate")  # getting details of current speaking rate
-    print(rate)  # printing current voice rate
-    engine.setProperty("rate", velocidad)  # setting up new voice rate
+def get_fact() -> str:
+    """
+    Recupera un dato curioso aleatorio desde la API.
+    Retorna:
+        str: El texto del dato o un mensaje de error.
+    """
+    base_url = "https://uselessfacts.jsph.pl/random.json?language=es"
+    response = requests.get(base_url)
+    data = response.json()
+    print(data)  # Para depuración
+    # Verifica que el idioma sea español
+    if response.status_code == 200:
+        return data.get("text", "No se pudo obtener el dato.")
+    else:
+        return "No se pudo obtener un dato en español. Intenta de nuevo."
 
 
-    # VOLUME
-    volume = engine.getProperty("volume")  # getting to know current volume level (min=0 and max=1)
-    print(volume)  # printing current volume level
-    engine.setProperty("volume", volumen)  # setting up volume level  between 0 and 1
+def speak(text: str):
+    """
+    Vocaliza el texto proporcionado usando pyttsx3.
+    Parámetros:
+        text (str): Texto que se va a vocalizar
+    """
+    engine.say(text)  # Añade el texto a la  síntesis de voz
+    engine.runAndWait()  # Procesa y vocaliza el texto
 
-    # VOICE
-    voices = engine.getProperty("voices")  # getting details of current voice
-    # engine.setProperty('voice', voices[0].id)  #changing index, changes voices. 0 for male
-    engine.setProperty("voice", voices[voz].id)  # changing index, changes voices. 1 for female
-    return engine
 
-def vocalizacion(engine, text):
-    engine.say(text)
-    engine.runAndWait()
+@bot.command()  # Define un comando llamado "start" para el bot
+async def start(ctx):
+    """
+    Comando para dar la bienvenida al usuario.
+    Parámetros:
+        ctx: Contexto del comando (información sobre la invocación del comando)
+    """
+    mensaje = "Soy tu bot de datos curiosos. Usa !fact para recibir un hecho interesante."
+    await ctx.send(mensaje)  # Envía mensaje de bienvenida a Discord
 
-def main():
-    print("Con este programa podras hacer que tu computadora hable, segun lo que le digas.")
-    text = input("Esribe lo que va a decir tu computadora: ")
-    velocidad = int(input("Configura la velocidad en la que tu computadora hablara entre 100 y 150:"))
-    volumen = float(input("Configura el volumen en el cual hablara tu computadora entre 0.0 y 1.0:"))
-    voz = int(input("Configura en que genero hablara tu computadora 0 para Masculino 1 para Femenino:"))
-    engine = configuracion(velocidad, volumen, voz)
-    vocalizacion(engine, text)
-    engine.save_to_file(text, "Archivo.mp3")
-    engine.runAndWait()
 
-main()
+@bot.command()  # Define un comando llamado "fact" para el bot
+async def fact(ctx):
+    """
+    Comando para recuperar un dato curioso aleatorio y vocalizarlo.
+    Parámetros:
+        ctx: Contexto del comando (información sobre la invocación del comando)
+    """
+    random_fact = get_fact()  # Obtiene un dato curioso aleatorio
+    await ctx.send(f"Aquí tienes un dato curioso: {random_fact}")  # Envía el dato al canal de Discord
+    speak(random_fact)  # Vocaliza el dato usando pyttsx3
+
+
+bot.run("TOKEN")  # Inicia el bot y lo conecta a Discord
